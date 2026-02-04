@@ -1,16 +1,15 @@
 //==========================================================
-// Student Number : S10273755
-// Student Name   : [Leroy Loh]
-// Partner Name   : [Jovan Yeo]
+// Student Number : S10274934
+// Student Name   : [Jovan Yeo]
+// Partner Name   : [Leroy Loh]
+// Class   By     : [Leroy Loh]
 //==========================================================
-// Class   By     : [Leroy]
 
 using System;
 using System.Collections.Generic;
 
 public class Restaurant
 {
-    
     private string              _restaurantId;
     private string              _restaurantName;
     private string              _restaurantEmail;
@@ -18,7 +17,6 @@ public class Restaurant
     private List<Order>         _orderQueue;        
     private List<SpecialOffer>  _specialOffers;     
 
-   
     public Restaurant(string restaurantId, string restaurantName, string restaurantEmail)
     {
         _restaurantId    = restaurantId;
@@ -29,7 +27,6 @@ public class Restaurant
         _specialOffers   = new List<SpecialOffer>();
     }
 
-    
     public string RestaurantId
     {
         get { return _restaurantId; }
@@ -63,31 +60,32 @@ public class Restaurant
         get { return _specialOffers; }
     }
 
-    
+
+    /// add the menu to the restaurant
     public void AddMenu(Menu menu)
     {
         _menus.Add(menu);
     }
 
-    
+    /// removes a Menu from this restaurant. Returns true if successful(bool)
     public bool RemoveMenu(Menu menu)
     {
         return _menus.Remove(menu);
     }
 
-    
+    /// add an Order to this restaurant's order queue.
     public void AddOrder(Order order)
     {
         _orderQueue.Add(order);
     }
 
-    
+    /// Adds a SpecialOffer to this restaurant.
     public void AddSpecialOffer(SpecialOffer offer)
     {
         _specialOffers.Add(offer);
     }
 
-    
+    /// Prints all orders currently in this restaurant's queue.
     public void DisplayOrders()
     {
         if (_orderQueue.Count == 0)
@@ -101,7 +99,7 @@ public class Restaurant
         }
     }
 
-   
+    /// Prints all special offers for this restaurant.
     public void DisplaySpecialOffers()
     {
         if (_specialOffers.Count == 0)
@@ -115,7 +113,6 @@ public class Restaurant
         }
     }
 
-    
     public void DisplayMenu()
     {
         if (_menus.Count == 0)
@@ -130,7 +127,6 @@ public class Restaurant
         }
     }
 
-    
     public override string ToString()
     {
         return $"{_restaurantName} ({_restaurantId})";
