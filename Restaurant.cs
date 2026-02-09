@@ -13,8 +13,8 @@ public class Restaurant
     private string              _restaurantId;
     private string              _restaurantName;
     private string              _restaurantEmail;
-    private List<Menu>          _menus;             
-    private List<Order>         _orderQueue;        
+    private List<Menu>          _menus;
+    private Queue<Order>        _orderQueue;
     private List<SpecialOffer>  _specialOffers;     
 
     public Restaurant(string restaurantId, string restaurantName, string restaurantEmail)
@@ -23,7 +23,7 @@ public class Restaurant
         _restaurantName  = restaurantName;
         _restaurantEmail = restaurantEmail;
         _menus           = new List<Menu>();
-        _orderQueue      = new List<Order>();
+        _orderQueue      = new Queue<Order>();
         _specialOffers   = new List<SpecialOffer>();
     }
 
@@ -50,10 +50,11 @@ public class Restaurant
         get { return _menus; }
     }
 
-    public List<Order> OrderQueue
+    public Queue<Order> OrderQueue
     {
         get { return _orderQueue; }
     }
+
 
     public List<SpecialOffer> SpecialOffers
     {
@@ -76,7 +77,7 @@ public class Restaurant
     /// add an Order to this restaurant's order queue.
     public void AddOrder(Order order)
     {
-        _orderQueue.Add(order);
+        _orderQueue.Enqueue(order);
     }
 
     /// Adds a SpecialOffer to this restaurant.

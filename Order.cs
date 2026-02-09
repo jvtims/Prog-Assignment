@@ -13,6 +13,8 @@ public class Order
     public const double DELIVERY_FEE = 5.00;
 
     private int              _orderId;
+    private string           _customerEmail;
+    private string           _restaurantId;
     private DateTime         _orderDateTime;         
     private double           _orderTotal;            
     private string           _orderStatus;           
@@ -20,13 +22,17 @@ public class Order
     private string           _deliveryAddress;
     private string           _orderPaymentMethod;    
     private bool             _orderPaid;
+    private string           _specialRequest;
     private List<OrderedFoodItem> _orderedItems;     
 
 
-    public Order(int orderId, DateTime orderDateTime, DateTime deliveryDateTime,
-                 string deliveryAddress, string orderPaymentMethod, bool orderPaid, string orderStatus)
+    public Order(int orderId, string customerEmail, string restaurantId,
+             DateTime orderDateTime, DateTime deliveryDateTime,
+             string deliveryAddress, string orderPaymentMethod, bool orderPaid, string orderStatus)
     {
         _orderId            = orderId;
+        _customerEmail      = customerEmail;
+        _restaurantId       = restaurantId;
         _orderDateTime      = orderDateTime;
         _deliveryDateTime   = deliveryDateTime;
         _deliveryAddress    = deliveryAddress;
@@ -35,12 +41,25 @@ public class Order
         _orderStatus        = orderStatus;
         _orderedItems       = new List<OrderedFoodItem>();
         _orderTotal         = 0.0;
+        _specialRequest = "";
     }
 
     public int OrderId
     {
         get { return _orderId; }
         set { _orderId = value; }
+    }
+
+    public string CustomerEmail
+    {
+        get { return _customerEmail; }
+        set { _customerEmail = value; }
+    }
+
+    public string RestaurantId
+    {
+        get { return _restaurantId; }
+        set { _restaurantId = value; }
     }
 
     public DateTime OrderDateTime
@@ -83,6 +102,11 @@ public class Order
     {
         get { return _orderPaid; }
         set { _orderPaid = value; }
+    }
+    public string SpecialRequest
+    {
+        get { return _specialRequest; }
+        set { _specialRequest = value; }
     }
 
     public List<OrderedFoodItem> OrderedItems
