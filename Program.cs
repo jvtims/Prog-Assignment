@@ -1,9 +1,10 @@
 //===================================================================================================
 // Student Number : S10273755
 // Student Name   : [Leroy Loh] Features [1,4,6,8] Advanced Feature (A) Bonus: Customer Notifications
-// Partner Name   : [Jovan Yeo] Features [2,3,5,7]
+// Partner Name   : [Jovan Yeo] Features [2,3,5,7] Advanced Feature (B) Bonus: Favourite Order
 //===================================================================================================
 
+using S10274934_PRG2Assignment;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,12 +17,14 @@ class Program
     static List<Order> allOrders = new List<Order>();
     static Stack<Order> refundStack = new Stack<Order>();
     static Dictionary<string, List<string>> notifications = new Dictionary<string, List<string>>();
+    static List<FavouriteOrder> favouriteList = new List<FavouriteOrder>();
 
 
     static string restaurantFile = "restaurants.csv";
     static string foodItemFile = "fooditems.csv";
     static string customerFile = "customers.csv";
     static string orderFile = "orders.csv";
+    static string favouriteFile = "favouriteorders.csv";
 
     //  main
     static void Main(string[] args)
@@ -36,6 +39,7 @@ class Program
         // feature 2, load customers and orders
         LoadCustomers();
         LoadOrders();
+        LoadFavouriteOrders();
 
         // Display what was loaded
         Console.WriteLine(restaurants.Count + " restaurants loaded!");
@@ -69,7 +73,7 @@ class Program
             else if (choice == "3")
             {
                 CreateNewOrder();   // Feature 5
-                
+
             }
             else if (choice == "5")
             {
@@ -85,11 +89,31 @@ class Program
             }
             else if (choice == "7")
             {
-                BulkProcessPendingOrdersForDay();
+                BulkProcessPendingOrdersForDay(); // ADVANCED FEATURE
             }
             else if (choice == "8")
             {
                 ViewCustomerNotifications(); // Bonus Feature
+            }
+            else if (choice == "9") // ADVANCED FEATURE
+            {
+                DisplayTotalOrderAmountAndRefunds();
+            }
+            else if (choice == "10") // BONUS FEATURE
+            {
+                AddFavouriteOrder();
+            }
+            else if (choice == "11") // BONUS FEATURE
+            {
+                DeleteFavouriteOrder();
+            }
+            else if (choice == "12") // BONUS FEATURE
+            {
+                ViewFavouriteOrders();
+            }
+            else if (choice == "13") // BONUS FEATURE
+            {
+                CreateOrderFromFavourite();
             }
             else
             {
@@ -112,6 +136,11 @@ class Program
         Console.WriteLine("6. Delete an existing order");
         Console.WriteLine("7. Bulk process pending orders (specific day)");
         Console.WriteLine("8. View customer notifications");
+        Console.WriteLine("9. Display total order amount");
+        Console.WriteLine("10. Add Favourite Order (Delivered only)");
+        Console.WriteLine("11. Remove Favourite Order");
+        Console.WriteLine("12. View Favourite Orders");
+        Console.WriteLine("13. Create Order from Favourite");
         Console.WriteLine("0. Exit");
         Console.Write("Enter your choice: ");
     }
@@ -1119,6 +1148,8 @@ class Program
         return result.ToArray();
     }
 
+    // ADVANCED/BONUS FEATURES //
+
     static void BulkProcessPendingOrdersForDay() // Leroy advanced feature
     {
         Console.WriteLine();
@@ -1260,8 +1291,449 @@ class Program
             Console.WriteLine("- " + msg);
     }
 
+    static void DisplayTotalOrderAmountAndRefunds() // Jovan advanced Feature
+    {
+        const double COMMISSION_RATE = 0.30;
 
+        double overallDeliveredFoodTotal = 0; // delivered less delivery fee (report requirement)
+        double overallDeliveredFullTotal = 0; // delivered including delivery (for 30% earnings)
+        double overallRefundTotal = 0;
 
+        Console.WriteLine("\n=== Advanced Feature B: Revenue Summary ===");
 
+        for (int i = 0; i < restaurants.Count; i++)
+        {
+            Restaurant r = restaurants[i];
 
+            double deliveredFoodTotal = 0;
+            double deliveredFullTotal = 0;
+            double refundTotal = 0;
+
+            for (int j = 0; j < allOrders.Count; j++)
+            {
+                Order o = allOrders[j];
+
+                // match restaurant (change names if needed)
+                if (o.RestaurantId != r.RestaurantId)
+                    continue;
+
+                if (o.OrderStatus == "Delivered")
+                {
+                    deliveredFoodTotal += (o.OrderTotal - Order.DELIVERY_FEE); // less delivery fee per order (WHAT DOES THIS MEAN)
+                    deliveredFullTotal += o.OrderTotal;                        // includes delivery fee for gruberoo 30%
+                }
+                else if (o.OrderStatus == "Rejected" || o.OrderStatus == "Cancelled" || o.OrderStatus == "Refunded")
+                {
+                    refundTotal += o.OrderTotal; // refund includes delivery fee
+                }
+            }
+
+            Console.WriteLine("\nRestaurant: " + r.RestaurantName + " (" + r.RestaurantId + ")");
+            Console.WriteLine("Total Delivered Order Amount (less delivery): $" + deliveredFoodTotal.ToString("F2"));
+            Console.WriteLine("Total Refunds (Cancelled): $" + refundTotal.ToString("F2"));
+
+            overallDeliveredFoodTotal += deliveredFoodTotal;
+            overallDeliveredFullTotal += deliveredFullTotal;
+            overallRefundTotal += refundTotal;
+        }
+
+        double gruberooEarns = overallDeliveredFullTotal * COMMISSION_RATE;
+
+        Console.WriteLine("\n=== Overall Totals ===");
+        Console.WriteLine("Total Order Amount (less delivery): $" + overallDeliveredFoodTotal.ToString("F2"));
+        Console.WriteLine("Total Refunds: $" + overallRefundTotal.ToString("F2"));
+        Console.WriteLine("Final Amount Gruberoo Earns (30% of Delivered, incl. delivery): $" + gruberooEarns.ToString("F2"));
+    }
+
+    static void LoadFavouriteOrders() // Jovan bonus feature
+    {
+        // If file doesn't exist, create it with header only
+        if (!File.Exists(favouriteFile))
+        {
+            File.WriteAllText(favouriteFile, "CustomerEmail,OrderID,FavouriteName\n");
+            return;
+        }
+
+        string[] lines = File.ReadAllLines(favouriteFile);
+
+        // Start from 1 to skip header
+        for (int i = 1; i < lines.Length; i++)
+        {
+            if (lines[i].Trim() == "")
+                continue;
+
+            // If your Program.cs already has ParseCSVLine, use it (recommended)
+            string[] parts = ParseCSVLine(lines[i]);
+
+            if (parts.Length < 3)
+                continue;
+
+            string email = parts[0].Trim();
+            int orderId = Convert.ToInt32(parts[1].Trim());
+            string favName = parts[2].Trim();
+
+            favouriteList.Add(new FavouriteOrder(email, orderId, favName));
+        }
+    }
+
+    static void SaveFavouriteOrders() // Jovan bonus feature
+    {
+        // Always rewrite the whole file (simpler, less bugs)
+        List<string> lines = new List<string>();
+        lines.Add("CustomerEmail,OrderID,FavouriteName");
+
+        for (int i = 0; i < favouriteList.Count; i++)
+        {
+            FavouriteOrder f = favouriteList[i];
+
+            string favName = f.FavouriteName;
+            if (favName.Contains(","))
+                favName = "\"" + favName + "\"";
+
+            lines.Add(f.CustomerEmail + "," + f.OrderId + "," + favName);
+        }
+
+        File.WriteAllLines(favouriteFile, lines);
+    }
+
+    static void AddFavouriteOrder() // Jovan bonus feature
+    {
+        Console.WriteLine();
+        Console.WriteLine("Add Favourite Order (Delivered only)");
+        Console.WriteLine("===================================");
+
+        // 1) Customer email (must exist)
+        Customer cust = null;
+        while (cust == null)
+        {
+            Console.Write("Enter Customer Email: ");
+            string emailInput = Console.ReadLine().Trim();
+            cust = FindCustomerByEmail(emailInput);
+            if (cust == null)
+                Console.WriteLine("Customer not found. Try again.");
+        }
+
+        string email = cust.EmailAddress;
+
+        // 2) Collect Delivered orders for this customer
+        List<Order> delivered = new List<Order>();
+        for (int i = 0; i < allOrders.Count; i++)
+        {
+            Order o = allOrders[i];
+            if (o.CustomerEmail == email && o.OrderStatus == "Delivered")
+                delivered.Add(o);
+        }
+
+        if (delivered.Count == 0)
+        {
+            Console.WriteLine("No Delivered orders found. Only Delivered orders can be favourited.");
+            return;
+        }
+
+        // 3) Show delivered orders and let user choose one
+        Console.WriteLine();
+        Console.WriteLine("Delivered Orders:");
+        for (int i = 0; i < delivered.Count; i++)
+        {
+            Order o = delivered[i];
+            Console.WriteLine((i + 1) + ". OrderId: " + o.OrderId + " | Restaurant: " + o.RestaurantId +
+                              " | Total: $" + o.OrderTotal.ToString("F2"));
+        }
+
+        Console.Write("Choose an order number to favourite: ");
+        int choice;
+        if (!int.TryParse(Console.ReadLine(), out choice) || choice < 1 || choice > delivered.Count)
+        {
+            Console.WriteLine("Invalid choice.");
+            return;
+        }
+
+        Order chosen = delivered[choice - 1];
+
+        // 4) Favourite name
+        Console.Write("Enter Favourite Name (e.g. MyUsual): ");
+        string favName = Console.ReadLine().Trim();
+        if (favName == "")
+        {
+            Console.WriteLine("Favourite name cannot be empty.");
+            return;
+        }
+
+        // 5) Prevent duplicate favourite names for the same email (optional but neat)
+        for (int i = 0; i < favouriteList.Count; i++)
+        {
+            if (favouriteList[i].CustomerEmail == email &&
+                favouriteList[i].FavouriteName.Equals(favName, StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("You already have a favourite with this name. Use a different name.");
+                return;
+            }
+        }
+
+        FavouriteOrder fav = new FavouriteOrder(email, chosen.OrderId, favName);
+
+        favouriteList.Add(fav);
+        SaveFavouriteOrders();
+
+        Console.WriteLine("Favourite saved successfully!");
+    }
+
+    static void DeleteFavouriteOrder() // Jovan bonus feature
+    {
+        Console.Write("Enter customer email: ");
+        string email = Console.ReadLine().Trim();
+
+        // Collect favourites for this customer
+        List<FavouriteOrder> userFavs = new List<FavouriteOrder>();
+
+        for (int i = 0; i < favouriteList.Count; i++)
+        {
+            if (favouriteList[i].CustomerEmail == email)
+                userFavs.Add(favouriteList[i]);
+        }
+
+        if (userFavs.Count == 0)
+        {
+            Console.WriteLine("No favourite orders found for this email.");
+            return;
+        }
+
+        Console.WriteLine("\nFavourite Orders:");
+        for (int i = 0; i < userFavs.Count; i++)
+        {
+            Console.WriteLine((i + 1) + ". " +
+                userFavs[i].FavouriteName +
+                " (OrderID: " + userFavs[i].OrderId + ")");
+        }
+
+        Console.Write("Enter favourite number to delete: ");
+        int choice = Convert.ToInt32(Console.ReadLine());
+
+        if (choice < 1 || choice > userFavs.Count)
+        {
+            Console.WriteLine("Invalid choice.");
+            return;
+        }
+
+        FavouriteOrder toRemove = userFavs[choice - 1];
+
+        // Remove from main list
+        favouriteList.Remove(toRemove);
+
+        // Rewrite CSV to reflect deletion
+        SaveFavouriteOrders();
+
+        Console.WriteLine("Favourite order deleted successfully.");
+    }
+
+    static void ViewFavouriteOrders() // Jovan bonus feature
+    {
+        Console.Write("Enter customer email: ");
+        string email = Console.ReadLine().Trim();
+
+        bool found = false;
+
+        Console.WriteLine("\nFavourite Orders:");
+        for (int i = 0; i < favouriteList.Count; i++)
+        {
+            FavouriteOrder f = favouriteList[i];
+
+            if (f.CustomerEmail == email)
+            {
+                found = true;
+                Console.WriteLine((i + 1) + ". " + f.FavouriteName + " (OrderID: " + f.OrderId + ")");
+            }
+        }
+
+        if (!found)
+            Console.WriteLine("No favourites found for this email.");
+    }
+
+    static void CreateOrderFromFavourite() // Jovan bonus feature
+    {
+        Console.WriteLine();
+        Console.WriteLine("Create Order from Favourite");
+        Console.WriteLine("===========================");
+
+        // 1) Customer email must exist
+        Customer cust = null;
+        while (cust == null)
+        {
+            Console.Write("Enter Customer Email: ");
+            string emailInput = Console.ReadLine().Trim();
+            cust = FindCustomerByEmail(emailInput);
+            if (cust == null)
+                Console.WriteLine("Customer not found. Try again.");
+        }
+
+        string email = cust.EmailAddress;
+
+        // 2) Collect favourites for this customer
+        List<FavouriteOrder> userFavs = new List<FavouriteOrder>();
+        for (int i = 0; i < favouriteList.Count; i++)
+        {
+            if (favouriteList[i].CustomerEmail == email)
+                userFavs.Add(favouriteList[i]);
+        }
+
+        if (userFavs.Count == 0)
+        {
+            Console.WriteLine("No favourites found. Please add one first.");
+            return;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Your Favourites:");
+        for (int i = 0; i < userFavs.Count; i++)
+        {
+            Console.WriteLine((i + 1) + ". " + userFavs[i].FavouriteName + " (OrderId: " + userFavs[i].OrderId + ")");
+        }
+
+        Console.Write("Choose favourite number: ");
+        int favChoice;
+        if (!int.TryParse(Console.ReadLine(), out favChoice) || favChoice < 1 || favChoice > userFavs.Count)
+        {
+            Console.WriteLine("Invalid choice.");
+            return;
+        }
+
+        FavouriteOrder selectedFav = userFavs[favChoice - 1];
+
+        // 3) Find the original order by OrderId
+        Order original = null;
+        for (int i = 0; i < allOrders.Count; i++)
+        {
+            if (allOrders[i].OrderId == selectedFav.OrderId)
+            {
+                original = allOrders[i];
+                break;
+            }
+        }
+
+        if (original == null)
+        {
+            Console.WriteLine("Original order not found. (orders.csv may have been changed)");
+            return;
+        }
+
+        // 4) Restaurant must exist
+        Restaurant rest = FindRestaurantById(original.RestaurantId);
+        if (rest == null)
+        {
+            Console.WriteLine("Restaurant not found for this favourite.");
+            return;
+        }
+
+        // 5) Ask delivery date + time (same as CreateNewOrder, but items are copied)
+        DateTime deliveryDate;
+        while (true)
+        {
+            Console.Write("Enter Delivery Date (dd/mm/yyyy): ");
+            string d = Console.ReadLine().Trim();
+            if (DateTime.TryParseExact(d, "dd/MM/yyyy", null,
+                System.Globalization.DateTimeStyles.None, out deliveryDate))
+                break;
+
+            Console.WriteLine("Invalid date format. Try again.");
+        }
+
+        DateTime deliveryTimeOnly;
+        while (true)
+        {
+            Console.Write("Enter Delivery Time (hh:mm): ");
+            string t = Console.ReadLine().Trim();
+            if (DateTime.TryParseExact(t, "HH:mm", null,
+                System.Globalization.DateTimeStyles.None, out deliveryTimeOnly))
+                break;
+
+            Console.WriteLine("Invalid time format. Try again.");
+        }
+
+        DateTime deliveryDT = new DateTime(deliveryDate.Year, deliveryDate.Month, deliveryDate.Day,
+                                          deliveryTimeOnly.Hour, deliveryTimeOnly.Minute, 0);
+
+        Console.Write("Enter Delivery Address: ");
+        string address = Console.ReadLine();
+
+        // 6) Create new order (same constructor as CreateNewOrder)
+        int newOrderId = GetNextOrderId();
+        DateTime orderCreatedDT = DateTime.Now;
+
+        Order newOrder = new Order(
+            newOrderId,
+            email,
+            rest.RestaurantId,
+            orderCreatedDT,
+            deliveryDT,
+            address,
+            "",
+            false,
+            "Unpaid"
+        );
+
+        // 7) Copy items from original order using Items string (re-use your existing helpers)
+        string itemsField = BuildItemsColumn(original);
+        AddItemsFromCsvToOrder(newOrder, rest.RestaurantId, itemsField);
+
+        if (newOrder.OrderedItems.Count == 0)
+        {
+            Console.WriteLine("Favourite order has no items. Cannot create order.");
+            return;
+        }
+
+        // 8) Special request (optional)
+        Console.Write("Add special request? [Y/N]: ");
+        string sr = Console.ReadLine().Trim().ToUpper();
+        if (sr == "Y")
+        {
+            Console.Write("Enter special request: ");
+            newOrder.SpecialRequest = Console.ReadLine();
+        }
+
+        // 9) Show total
+        double total = newOrder.CalculateOrderTotal();
+        Console.WriteLine();
+        Console.WriteLine("Order Total: $" + (total - Order.DELIVERY_FEE).ToString("F2") +
+                          " + $5.00 (delivery) = $" + total.ToString("F2"));
+
+        // 10) Payment?
+        Console.Write("Proceed to payment? [Y/N]: ");
+        string payChoice = Console.ReadLine().Trim().ToUpper();
+        if (payChoice != "Y")
+        {
+            Console.WriteLine("Payment not made. Order not created.");
+            return;
+        }
+
+        // 11) Payment method
+        string method = "";
+        while (true)
+        {
+            Console.Write("Payment method [CC/PP/CD]: ");
+            method = Console.ReadLine().Trim().ToUpper();
+
+            if (method == "CC" || method == "PP" || method == "CD")
+                break;
+
+            Console.WriteLine("Invalid method. Enter CC, PP or CD.");
+        }
+
+        newOrder.OrderPaymentMethod = method;
+        newOrder.OrderPaid = true;
+        newOrder.OrderStatus = "Pending";
+        newOrder.OrderTotal = total;
+
+        // 12) Save into system
+        allOrders.Add(newOrder);
+        cust.AddOrder(newOrder);
+        rest.AddOrder(newOrder);
+
+        // 13) Append to orders.csv (Items are included)
+        AppendOrderToFile(newOrder, email, rest.RestaurantId);
+
+        Console.WriteLine();
+        Console.WriteLine("Order " + newOrder.OrderId + " created from favourite! Status: " + newOrder.OrderStatus);
+        AddNotification(email, "Order " + newOrder.OrderId + " created from favourite. Status: Pending.");
+    }
 }
+

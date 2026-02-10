@@ -55,7 +55,6 @@ public class Restaurant
         get { return _orderQueue; }
     }
 
-
     public List<SpecialOffer> SpecialOffers
     {
         get { return _specialOffers; }
